@@ -828,7 +828,7 @@ TEST_F(CPUBBoxUtilTest, TestGetGroundTruthLabelBBox) {
   }
 
   map<int, LabelBBox> all_gt_bboxes;
-  GetGroundTruth(gt_data, num_gt, -1, true, &all_gt_bboxes);
+  GetGroundTruth(gt_data, num_gt, -1, true, false, &all_gt_bboxes);
 
   EXPECT_EQ(all_gt_bboxes.size(), 3);
 
@@ -862,7 +862,7 @@ TEST_F(CPUBBoxUtilTest, TestGetGroundTruthLabelBBox) {
   EXPECT_NEAR(all_gt_bboxes[2].find(3)->second[0].size(), 0.04, eps);
 
   // Skip difficult ground truth.
-  GetGroundTruth(gt_data, num_gt, -1, false, &all_gt_bboxes);
+  GetGroundTruth(gt_data, num_gt, -1, false, true,&all_gt_bboxes);
 
   EXPECT_EQ(all_gt_bboxes.size(), 2);
 
@@ -1114,7 +1114,7 @@ TEST_F(CPUBBoxUtilTest, TestComputeConfLossMatch) {
   vector<vector<float> > all_conf_loss;
   ConfLossType loss_type = MultiBoxLossParameter_ConfLossType_LOGISTIC;
   ComputeConfLoss(conf_data, num, num_preds_per_class, num_classes,
-                  -1, loss_type, all_match_indices, all_gt_bboxes,
+                  -1, loss_type, false, all_match_indices, all_gt_bboxes,
                   &all_conf_loss);
 
   EXPECT_EQ(all_conf_loss.size(), num);
@@ -1132,7 +1132,7 @@ TEST_F(CPUBBoxUtilTest, TestComputeConfLossMatch) {
               eps);
 
   ComputeConfLoss(conf_data, num, num_preds_per_class, num_classes,
-                  0, loss_type, all_match_indices, all_gt_bboxes,
+                  0, loss_type, false, all_match_indices, all_gt_bboxes,
                   &all_conf_loss);
 
   EXPECT_EQ(all_conf_loss.size(), num);
@@ -1149,7 +1149,7 @@ TEST_F(CPUBBoxUtilTest, TestComputeConfLossMatch) {
 
   loss_type = MultiBoxLossParameter_ConfLossType_SOFTMAX;
   ComputeConfLoss(conf_data, num, num_preds_per_class, num_classes,
-                  0, loss_type, all_match_indices, all_gt_bboxes,
+                  0, loss_type, false, all_match_indices, all_gt_bboxes,
                   &all_conf_loss);
 
   EXPECT_EQ(all_conf_loss.size(), num);

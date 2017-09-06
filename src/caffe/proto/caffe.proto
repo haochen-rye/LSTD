@@ -212,7 +212,7 @@ message NetParameter {
 // NOTE
 // Update the next available ID when you add a new SolverParameter field.
 //
-// SolverParameter next available ID: 44 (last added: plateau_winsize)
+// SolverParameter next available ID: 47 (last added: block_group_decay #last added: plateau_winsize)
 message SolverParameter {
   //////////////////////////////////////////////////////////////////////////////
   // Specifying the train and test networks
@@ -357,6 +357,10 @@ message SolverParameter {
   // If false, don't save a snapshot after training finishes.
   optional bool snapshot_after_train = 28 [default = true];
 
+  optional float breadth_decay = 45 [default = 0.0]; // The group weight decay on each kernel.
+  optional float kernel_shape_decay = 46 [default = 0.0]; // The group weight decay on all elemements having the same coordinate in each kernel
+  optional float block_group_decay = 47 [default = 0.0]; // The group weight decay on all elemements each block
+
   // DEPRECATED: old solver enum types, use string instead
   enum SolverType {
     SGD = 0;
@@ -432,6 +436,29 @@ message ParamSpec {
 
   // The multiplier on the global weight decay for this parameter.
   optional float decay_mult = 4 [default = 1.0];
+
+  //The multiplier on the global group lasso weight decay for this parameter.
+  optional float breadth_decay_mult = 5 [default = 0.0];
+  optional float kernel_shape_decay_mult = 6 [default = 0.0];
+  
+  repeated BlockGroupLassoSpec block_group_lasso = 7;  
+  // To specify local regularization type ("L1"/"L2") 
+  optional string regularization_type = 8 [default = ""];
+  
+  // The binary proto file specifying the local weight decay multipliers for individual weights. 
+  optional string decay_proto = 9 [default = ""];  
+}
+
+// Specifies shape and decay multiplier of a block, on which group lasso regularization is enforced.
+message BlockGroupLassoSpec {
+  // the size of the block along x-dimension (i.e. along row of a matrix)
+  optional uint32 xdimen = 1 [default = 1]; 
+  
+  // the size of the block along y-dimension (i.e. along column of a matrix)
+  optional uint32 ydimen = 2 [default = 1]; 
+  
+  // loca decay multiplier of group lasso regularization on this block
+  optional float block_decay_mult = 3 [default = 1.0];
 }
 
 // NOTE
@@ -468,6 +495,15 @@ message LayerParameter {
   // The size must be either 0 or equal to the number of bottoms.
   repeated bool propagate_down = 11;
 
+  // Specifies how to deal with connections whose weights are recovered/initialized as zeros. 
+  // Used for fine-tuning
+  enum ConnectivityMode {
+    CONNECTED = 0;  //keep connected
+    DISCONNECTED_ELTWISE = 1; //disconnect all zero-weight connections
+    DISCONNECTED_GRPWISE = 2; //disconnect connections lying in all-zero rows and all-zero columns 
+  }
+  optional ConnectivityMode connectivity_mode = 12 [default = CONNECTED];
+  
   // Rules controlling whether and when a layer is included in the network,
   // based on the current NetState.  You may specify a non-zero number of rules
   // to include OR exclude, but not both.  If no include or exclude rules are
@@ -533,6 +569,7 @@ message LayerParameter {
   optional ReLUParameter relu_param = 123;
   optional ReshapeParameter reshape_param = 133;
   optional ScaleParameter scale_param = 142;
+  optional ROIPoolingParameter roi_pooling_param = 2000;
   optional SigmoidParameter sigmoid_param = 124;
   optional SoftmaxParameter softmax_param = 125;
   optional SPPParameter spp_param = 132;
@@ -542,6 +579,14 @@ message LayerParameter {
   optional TileParameter tile_param = 138;
   optional VideoDataParameter video_data_param = 207;
   optional WindowDataParameter window_data_param = 129;
+  optional CConvolutionParameter cconvolution_param = 2001;
+  optional CInnerProductParameter cinner_product_param = 2002;
+  optional AttentionConfParameter attention_conf_param = 2003;   
+  optional PostPriorParameter post_prior_param = 2004;    
+//  optional PostClassLossParameter post_class_loss_param = 2005;
+//  optional ProposalOutParameter proposal_out_param = 2005;  
+  optional RestrainLossParameter restrain_loss_param = 2006;
+  optional MultilabelTransformerParameter multilabel_transformer_param = 2007; 
 }
 
 // Message that stores parameters used to apply transformation
@@ -893,6 +938,25 @@ message ConvolutionParameter {
   // implementation; for input blobs with num_axes != 2, this option is
   // ignored and the ND implementation will be used.)
   optional bool force_nd_im2col = 17 [default = false];
+
+  // the method of convolutional computation
+  enum ConvMode {
+    LOWERED_GEMM = 0;   //gemm on lowered tensors
+    LOWERED_CSRMM = 1;  //sparse weight matrix in CSR format * lowered feature maps
+    LOWERED_CCNMM = 2;  //removing all-zero rows & columns and ConCateNating remaining ones, then do gemm. GPU mode is implemented with partial CPU subroutines :(. 
+    DIRECT_SCONV = 3;  //direct convolution on tensors without lowering, harnessing sparsity. More in intel branch
+    DIRECT_DCONV = 4;  //direct convolution on tensors without lowering, dense format. More in intel branch
+  }
+  optional ConvMode conv_mode = 21 [default = LOWERED_GEMM];  
+}
+
+message CConvolutionParameter {
+  optional float gamma = 1 [default = 0.001]; // The compress parameter of current layer
+  optional float power = 2 [default = 1];
+  optional float iter_stop = 3 [default = 10000];  
+  optional float c_rate = 4 [default = 3];    
+  optional FillerParameter weight_mask_filler = 5; // The filler for the weight
+  optional FillerParameter bias_mask_filler = 6;   // The filler for the bias  
 }
 
 message CropParameter {
@@ -967,6 +1031,10 @@ message DetectionEvaluateParameter {
   optional string name_size_file = 5;
   // The resize parameter used in converting NormalizedBBox to original image.
   optional ResizeParameter resize_param = 6;
+  // If true, map all object classes to agnostic class. It is useful for learning
+  // objectness detector.
+//TODO whrther add this param or not
+  optional bool map_object_to_agnostic = 7 [default = false];
 }
 
 message NonMaximumSuppressionParameter {
@@ -1198,6 +1266,15 @@ message InnerProductParameter {
   optional bool transpose = 6 [default = false];
 }
 
+message CInnerProductParameter {
+  optional float gamma = 1 [default = 0.001]; // The compress parameter of current layer
+  optional float power = 2 [default = 1];
+  optional float iter_stop = 3 [default = 8000];
+  optional float c_rate = 4 [default = 3];  
+  optional FillerParameter weight_mask_filler = 5; // The filler for the weight
+  optional FillerParameter bias_mask_filler = 6;   // The filler for the bias  
+}
+
 message InputParameter {
   // This layer produces N >= 1 top blob(s) to be assigned manually.
   // Define N shapes to set a shape for each top.
@@ -1254,7 +1331,7 @@ message MultiBoxLossParameter {
   enum ConfLossType {
     SOFTMAX = 0;
     LOGISTIC = 1;
-  }
+  }  
   optional ConfLossType conf_loss_type = 2 [default = SOFTMAX];
   // Weight for localization loss.
   optional float loc_weight = 3 [default = 1.0];
@@ -1266,7 +1343,7 @@ message MultiBoxLossParameter {
   enum MatchType {
     BIPARTITE = 0;
     PER_PREDICTION = 1;
-  }
+  }  
   optional MatchType match_type = 6 [default = PER_PREDICTION];
   // If match_type is PER_PREDICTION, use overlap_threshold to
   // determine the extra matching bboxes.
@@ -1306,12 +1383,14 @@ message MultiBoxLossParameter {
     NONE = 0;
     MAX_NEGATIVE = 1;
     HARD_EXAMPLE = 2;
-  }
+  }  
   optional MiningType mining_type = 20 [default = MAX_NEGATIVE];
   // Parameters used for non maximum suppression durig hard example mining.
   optional NonMaximumSuppressionParameter nms_param = 21;
   optional int32 sample_size = 22 [default = 64];
   optional bool use_prior_for_nms = 23 [default = false];
+ // Weight for sgm loss
+  optional float sgm_loss_weight = 30 [default = 1.0];
 }
 
 message MVNParameter {
@@ -1565,6 +1644,34 @@ message ReshapeParameter {
   //
   optional int32 axis = 2 [default = 0];
   optional int32 num_axes = 3 [default = -1];
+}
+
+// Message that stores parameters used by ROIPoolingLayer
+message ROIPoolingParameter {
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in height and width or as Y, X pairs.
+  optional uint32 pooled_h = 1 [default = 0]; // The pooled output height
+  optional uint32 pooled_w = 2 [default = 0]; // The pooled output width
+  // Multiplicative spatial scale factor to translate ROI coords from their
+  // input scale to the scale used when pooling
+  optional float spatial_scale = 3 [default = 1];
+}
+
+message MultilabelTransformerParameter {
+  optional uint32 batch_size = 1 [default=1];
+  optional uint32 num_classes = 2;
+}
+
+message RestrainLossParameter {
+  optional uint32 spatial_scale = 1 [default =1];
+}
+
+message AttentionConfParameter {
+  optional uint32 num_classes = 1;
+}
+
+message PostPriorParameter {
+  optional uint32 num_proposal = 1 [default = 200];
 }
 
 message ScaleParameter {
