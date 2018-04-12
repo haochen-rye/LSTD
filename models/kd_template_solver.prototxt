@@ -1,0 +1,41 @@
+# The train/test net protocol buffer definition
+train_net: "models/VOC2007/train5_restrain_post_kd_ssl_ft_SSD_300x300/kd_train.prototxt" #batch_size: 40
+
+test_interval: 200
+test_net: "models/VOC2007/train5_restrain_post_kd_ssl_ft_SSD_300x300/test.prototxt" #batch_size: 20
+test_iter: 619
+test_initialization: false
+
+#test_net: "models/VOC2007/train5_restrain_post_kd_ssl_ft_SSD_300x300/mask_test.prototxt" #batch_size:5
+#test_iter: 200
+
+type: "Adam"
+momentum: 0.9
+momentum2: 0.999
+
+regularization_type: "L2"
+
+# The learning rate policy
+lr_policy: "multistep"
+gamma: 0.1
+stepvalue: 600
+stepvalue: 1200
+#stepvalue: 3500
+#stepvalue: 4800
+# The maximum number of iterations
+max_iter: 1800
+
+# Display every 200 iterations
+display: 10
+
+# snapshot intermediate results
+snapshot: 4000
+debug_info: false
+snapshot_after_train: true
+average_loss: 10
+iter_size: 1
+
+eval_type: "detection"
+ap_version: "11point"
+show_per_class_result: true
+
