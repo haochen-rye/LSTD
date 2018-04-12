@@ -3,10 +3,32 @@
 ### Introduction
 
 LSTD is an unified framework for transfer object detetction with a single network. For more details, please refer to our [arXiv paper](https://arxiv.org/abs/1803.01529v1).
-Framework  
+
+### Framework  
 LSTD is a network combining the advantage of SSD and Faster-RCNN, where it shares the two-stage detection framework with 
 the feature pyramid of SSD.
 
+Specifically, SSD acts as the region proposal network (RPN) in LSTD.
+Additionally, we propose Transfer Knowledge (TK) and Background Depression (BD) modules for transfer detection task.
+More details can be found in [LSTD](https://arxiv.org/abs/1803.01529v1).
 <p align="center">
-<img src="http://www.cs.unc.edu/~wliu/papers/ssd.png" alt="SSD Framework" width="800px">
+<img src='models/lstd.jpg'  width="800px">
 </p>
+
+For transfer detection, our LSTD outperforms SSD and Faster RCNN significantly.
+<p align="center">
+<img src='models/archi.png'  width="600px">
+</p>
+
+
+
+### Citing LSTD
+
+Please cite LSTD in your publicatins if it helps ypur research.
+
+    @inproceedings{hao2018lstd,
+      title = {LSTD: A Low-Shot Transfer Detector for Object Detection},
+      author = {Hao Chen and Yali Wang and Guoyou Wang and Yu Qiao},
+      booktitle = {AAAI},
+      year = {2018}
+    }
