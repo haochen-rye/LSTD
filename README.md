@@ -35,4 +35,4 @@ Please cite LSTD in your publicatins if it helps ypur research.
     }
 
 ### Utility
-To train/test the models, you may refer to our prototxt samples in [train.prototxt]('models/train.prototxt'), [test.prototxt]('models/test.prototxt') and [solver.prototxt]('models/kd_templature_solver.prototxt').
+To train/test the models, you may refer to our prototxt samples in [train.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/train.prototxt), [test.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/test.prototxt) and [solver.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/kd_template_solver.prototxt).
