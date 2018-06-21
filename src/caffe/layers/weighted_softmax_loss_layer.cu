@@ -11,22 +11,16 @@ template <typename Dtype>
 __global__ void WeightedSoftmaxLossForwardGPU(const int nthreads,
           const Dtype* prob_data, const Dtype* label, const Dtype* weights, 
           Dtype* loss, const int num, const int dim, const int spatial_dim,
-          const bool has_ignore_label_, const int ignore_label_,
           Dtype* counts) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int n = index / spatial_dim;
     const int s = index % spatial_dim;
-    const int label_value = static_cast<int>(label[n * spatial_dim + s]);
-    if (has_ignore_label_ && label_value == ignore_label_) {
-      loss[index] = 0;
-      counts[index] = 0;
-    } else {
-      loss[index] = -weights[n] * log(max(prob_data[n * dim + label_value * spatial_dim + s],
+    const int label_value = static_cast<int>(label[index]);
+      loss[index] = -weights[index] * log(max(prob_data[n * dim + label_value * spatial_dim + s],
                       Dtype(FLT_MIN)));
-      if (weights[n] > 1e-12) {
+      if (weights[index] > 1e-12) {
         counts[index] = 1;
       }
-    }
   }
 }
 
@@ -36,7 +30,7 @@ void WeightedSoftmaxWithLossLayer<Dtype>::Forward_gpu(
   softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);
   const Dtype* prob_data = prob_.gpu_data();
   const Dtype* label = bottom[1]->gpu_data();
-  const Dtype* cls_loss_weights = bottom[2]->gpu_data();
+  const Dtype* prob_loss_weights = bottom[2]->gpu_data();
   const int dim = prob_.count() / outer_num_;
   const int nthreads = outer_num_ * inner_num_;
   // Since this memory is not used for anything until it is overwritten
@@ -48,9 +42,8 @@ void WeightedSoftmaxWithLossLayer<Dtype>::Forward_gpu(
   Dtype* counts = prob_.mutable_gpu_diff();
   // NOLINT_NEXT_LINE(whitespace/operators)
   WeightedSoftmaxLossForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
-      CAFFE_CUDA_NUM_THREADS>>>(nthreads, prob_data, label, cls_loss_weights, 
-      loss_data, outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, 
-      counts);
+      CAFFE_CUDA_NUM_THREADS>>>(nthreads, prob_data, label, prob_loss_weights, 
+      loss_data, outer_num_, dim, inner_num_, counts);
   Dtype loss;
   caffe_gpu_asum(nthreads, loss_data, &loss);
   Dtype valid_count = -1;
@@ -66,8 +59,7 @@ void WeightedSoftmaxWithLossLayer<Dtype>::Forward_gpu(
 template <typename Dtype>
 __global__ void WeightedSoftmaxLossBackwardGPU(const int nthreads, const Dtype* top,
           const Dtype* label, const Dtype* weights, Dtype* bottom_diff, const int num, 
-          const int dim, const int spatial_dim, const bool has_ignore_label_,
-          const int ignore_label_, Dtype* counts) {
+          const int dim, const int spatial_dim, Dtype* counts) {
   const int channels = dim / spatial_dim;
 
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -75,20 +67,13 @@ __global__ void WeightedSoftmaxLossBackwardGPU(const int nthreads, const Dtype* 
     const int s = index % spatial_dim;
     const int label_value = static_cast<int>(label[n * spatial_dim + s]);
 
-    if (has_ignore_label_ && label_value == ignore_label_) {
-      for (int c = 0; c < channels; ++c) {
-        bottom_diff[n * dim + c * spatial_dim + s] = 0;
-      }
-      counts[index] = 0;
-    } else {
       bottom_diff[n * dim + label_value * spatial_dim + s] -= 1;
       for (int c = 0; c < channels; ++c) {
-        bottom_diff[n * dim + c * spatial_dim + s] *= weights[n];
+        bottom_diff[n * dim + c * spatial_dim + s] *= weights[index];
       }
-      if (weights[n] > 1e-12) {
+      if (weights[index] > 1e-12) {
         counts[index] = 1;
       }
-    }
   }
 }
 
@@ -109,7 +94,7 @@ void WeightedSoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*
     const Dtype* top_data = top[0]->gpu_data();
     caffe_gpu_memcpy(prob_.count() * sizeof(Dtype), prob_data, bottom_diff);
     const Dtype* label = bottom[1]->gpu_data();
-    const Dtype* cls_loss_weights = bottom[2]->gpu_data();
+    const Dtype* prob_loss_weights = bottom[2]->gpu_data();
     const int dim = prob_.count() / outer_num_;
     const int nthreads = outer_num_ * inner_num_;
     // Since this memory is never used for anything else,
@@ -117,8 +102,8 @@ void WeightedSoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*
     Dtype* counts = prob_.mutable_gpu_diff();
     // NOLINT_NEXT_LINE(whitespace/operators)
     WeightedSoftmaxLossBackwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
-        CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, cls_loss_weights, bottom_diff,
-        outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
+        CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, prob_loss_weights, bottom_diff,
+        outer_num_, dim, inner_num_, counts);
 
     Dtype valid_count = -1;
     // Only launch another CUDA kernel if we actually need the count of valid

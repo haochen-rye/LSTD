@@ -35,11 +35,11 @@ class MultilabelTransformerLayer : public Layer<Dtype> {
   /// @brief Not implemented -- MultilabelAccuracyLayer cannot be used as a loss.
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-    NOT_IMPLEMENTED;
   }
 
   int batch_size_;
   int num_classes_;
+  int num_rpn_;
 
 };
 

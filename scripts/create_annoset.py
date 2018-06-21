@@ -155,6 +155,26 @@ if __name__ == "__main__":
         .format(caffe_root, anno_type, min_dim, max_dim, resize_height,
             resize_width, backend, shuffle, check_size, encode_type, encoded,
             gray, root_dir, list_file, out_dir)
+  elif anno_type == "rotate_detection":
+    cmd = "{}/build/tools/convert_annoset" \
+        " --anno_type={}" \
+        " --label_type={}" \
+        " --label_map_file={}" \
+        " --check_label={}" \
+        " --min_dim={}" \
+        " --max_dim={}" \
+        " --resize_height={}" \
+        " --resize_width={}" \
+        " --backend={}" \
+        " --shuffle={}" \
+        " --check_size={}" \
+        " --encode_type={}" \
+        " --encoded={}" \
+        " --gray={}" \
+        " {} {} {}" \
+        .format(caffe_root, anno_type, label_type, label_map_file, check_label,
+            min_dim, max_dim, resize_height, resize_width, backend, shuffle,
+            check_size, encode_type, encoded, gray, root_dir, list_file, out_dir)         
   print cmd
   process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
   output = process.communicate()[0]

@@ -9,11 +9,15 @@
 #include "caffe/layers/loss_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 namespace caffe {
+
 template <typename Dtype>
 class MulticlassCrossEntropyLossLayer : public LossLayer<Dtype> {
+
  public:
   explicit MulticlassCrossEntropyLossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual inline const char* type() const { return "MulticlassCrossEntropyLoss"; }
@@ -28,7 +32,14 @@ class MulticlassCrossEntropyLossLayer : public LossLayer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-  int batch_size, channels;
-};
+
+  bool include_background_;
+  int score_start_idx_;
+  int batch_size_;
+  // channels_ is the dim for score, num_classes_ is the dim for label
+  int channels_;
+  int num_classes_;
+  };
+  
 }  // namespace caffe
 #endif  // CAFFE_MULTI_CLASS_CROSS_ENTROPY_LOSS_LAYER_HPP_

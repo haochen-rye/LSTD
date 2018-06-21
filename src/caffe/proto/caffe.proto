@@ -126,6 +126,7 @@ message NormalizedBBox {
   optional bool difficult = 6;
   optional float score = 7;
   optional float size = 8;
+  optional float rotation = 9 [default = 0];
 }
 
 // Annotation for each object instance.
@@ -587,6 +588,14 @@ message LayerParameter {
 //  optional ProposalOutParameter proposal_out_param = 2005;  
   optional RestrainLossParameter restrain_loss_param = 2006;
   optional MultilabelTransformerParameter multilabel_transformer_param = 2007; 
+  optional OICRParameter oicr_param = 2008;
+  optional GlobalSumPoolingParameter global_sum_pooling_param = 2009;
+  optional ProposalParameter proposal_param = 2010;
+  optional MulticlassCrossEntropyLossParameter multiclass_cross_entropy_loss_param = 2011;
+  optional MulticlassAccuracyParameter multiclass_accuracy_param = 2012;
+  optional MulticlassSigmoidLossParameter multiclass_sigmoid_loss_param = 2013;
+  optional MergeProposalParameter merge_proposal_param = 2014;
+  optional GTMaskParameter gt_mask_param = 2015;
 }
 
 // Message that stores parameters used to apply transformation
@@ -807,6 +816,14 @@ message AnnotatedDataParameter {
   // If provided, it will replace the AnnotationType stored in each
   // AnnotatedDatum.
   optional AnnotatedDatum.AnnotationType anno_type = 3;
+  // If provided, extract the rotation angle from the LMDB data
+  optional bool orient_anno = 4 [default = false];    
+}
+
+message GTMaskParameter {
+  optional int32 batch_size = 1 [default=1];
+  optional int32 height = 2;
+  optional int32 width = 3;
 }
 
 message ArgMaxParameter {
@@ -1035,6 +1052,7 @@ message DetectionEvaluateParameter {
   // objectness detector.
 //TODO whrther add this param or not
   optional bool map_object_to_agnostic = 7 [default = false];
+  optional bool evaluate_rotation = 8 [default = true];
 }
 
 message NonMaximumSuppressionParameter {
@@ -1102,6 +1120,32 @@ message DetectionOutputParameter {
   optional float visualize_threshold = 11;
   // If provided, save outputs to video file.
   optional string save_file = 12;
+  optional bool use_as_proposal = 13 [default = false];
+  optional uint32 num_proposal = 14 [default = 512];
+}
+
+// Message that store parameters used by ProposalLayer
+message ProposalParameter {
+  // Number of classes to be predicted. Required!
+  optional uint32 num_classes = 1;
+  // If true, bounding box are shared among different classes.
+  optional bool share_location = 2 [default = true];
+  // Background label id. If there is no background class,
+  // set it as -1.
+  optional int32 background_label_id = 3 [default = 0];
+  // Parameters used for non maximum suppression.
+  optional NonMaximumSuppressionParameter nms_param = 4;
+  // Type of coding method for bbox.
+  optional PriorBoxParameter.CodeType code_type = 6 [default = CORNER];
+  // If true, variance is encoded in target; otherwise we need to adjust the
+  // predicted offset accordingly.
+  optional bool variance_encoded_in_target = 8 [default = false];
+  // Number of total bboxes to be kept per image after nms step.
+  // -1 means keeping all bboxes after nms step.
+  optional int32 keep_top_k = 7 [default = -1];
+  // Only consider detections whose confidences are larger than a threshold.
+  // If not provided, consider all boxes.
+  optional float confidence_threshold = 9;
 }
 
 message DropoutParameter {
@@ -1391,6 +1435,12 @@ message MultiBoxLossParameter {
   optional bool use_prior_for_nms = 23 [default = false];
  // Weight for sgm loss
   optional float sgm_loss_weight = 30 [default = 1.0];
+  // overlap scope for negative sample in sparse annotated images
+  optional float neg_min_overlap = 31 [default = 0.1];
+  optional float neg_max_overlap = 32 [default = 0.5];
+  // loss type and weight for ratation loss
+  optional LocLossType rotation_loss_type = 33 [default = SMOOTH_L1];
+  optional float rotation_loss_weight = 34 [default = 1.0];
 }
 
 message MVNParameter {
@@ -1658,12 +1708,26 @@ message ROIPoolingParameter {
 }
 
 message MultilabelTransformerParameter {
-  optional uint32 batch_size = 1 [default=1];
-  optional uint32 num_classes = 2;
+  optional uint32 batch_size = 1;
+  optional uint32 num_classes = 2 [default = 20];
+  optional uint32 num_rpn = 3 [default = 1]; 
+}
+
+message MulticlassCrossEntropyLossParameter {
+  optional bool include_background = 1 [default = true];
+}
+
+
+message MulticlassSigmoidLossParameter {
+  optional bool include_background = 1 [default = true];
+}
+
+message MulticlassAccuracyParameter {
+  optional bool include_background = 1 [default = true];
 }
 
 message RestrainLossParameter {
-  optional uint32 spatial_scale = 1 [default =1];
+  optional uint32 spatial_scale = 1 [default = 1];
 }
 
 message AttentionConfParameter {
@@ -1672,6 +1736,36 @@ message AttentionConfParameter {
 
 message PostPriorParameter {
   optional uint32 num_proposal = 1 [default = 200];
+}
+
+message OICRParameter {
+  optional uint32 num_proposal = 1 ;
+  optional uint32 num_classes = 2 ; 
+  optional uint32 num_rpn = 3 [default = 1] ;  
+  optional bool merge_proposal = 4 [default = false];
+  optional uint32 background_label_id = 5 [default = 0]; 
+  optional float overlap_threshold = 6 [default = 0.5];
+  optional bool include_background = 7 [default = true];
+  optional bool output_bbox = 8 [default = true];  
+  optional bool include_ohem = 9 [default = true];
+  optional float max_score_threshold = 10 [default = 0.9];
+  optional float min_overlap = 11 [default = 0.2] ;
+  optional float pos_neg_ratio = 12 [default = 3];
+  optional bool del_neg = 13 [default = false];
+  optional bool use_gt_score = 14 [default = true];
+  optional bool use_max_score_threshold = 15 [default = false];
+}
+
+message MergeProposalParameter {
+  optional uint32 num_proposal = 1;
+  optional uint32 num_rpn = 2 [default = 1];
+  optional uint32 batch_size = 3;
+}
+
+message GlobalSumPoolingParameter {
+  optional uint32 num_classes = 1;
+  optional uint32 num_proposal = 2;
+  optional bool include_background = 3 [default = true];
 }
 
 message ScaleParameter {

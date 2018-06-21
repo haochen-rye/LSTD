@@ -22,6 +22,8 @@ void DetectionOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   share_location_ = detection_output_param.share_location();
   num_loc_classes_ = share_location_ ? 1 : num_classes_;
   background_label_id_ = detection_output_param.background_label_id();
+  use_as_proposal_ = detection_output_param.use_as_proposal();
+  num_proposal_ = detection_output_param.num_proposal();
   code_type_ = detection_output_param.code_type();
   variance_encoded_in_target_ =
       detection_output_param.variance_encoded_in_target();
@@ -122,6 +124,7 @@ void DetectionOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     bbox_permute_.ReshapeLike(*(bottom[0]));
   }
   conf_permute_.ReshapeLike(*(bottom[1]));
+
 }
 
 template <typename Dtype>
@@ -169,7 +172,21 @@ void DetectionOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   vector<int> top_shape(2, 1);
   // Since the number of bboxes to be kept is unknown before nms, we manually
   // set it to (fake) 1.
-  top_shape.push_back(1);
+  if (use_as_proposal_){
+    // top_shape.push_back(num_proposal_);
+    const int num = bottom[0]->num();
+    top_shape.push_back(num * keep_top_k_);
+  }
+  else{
+    top_shape.push_back(1);
+  }
+
+  // LOG(INFO) << "use_proposal: " << use_as_proposal_
+  //   << "\nthe num_proposal: " << num_proposal_
+  //   << "\n keep_top_k_: " << keep_top_k_
+  //   << "\n num_classes_: " << num_classes_
+  //   << "\nthe num_proposal in layer proposal is:" << top_shape[2];
+
   // Each row is a 7 dimension vector, which stores
   // [image_id, label, confidence, xmin, ymin, xmax, ymax]
   top_shape.push_back(7);

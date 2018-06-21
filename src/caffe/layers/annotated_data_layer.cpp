@@ -49,6 +49,15 @@ void AnnotatedDataLayer<Dtype>::DataLayerSetUp(
   // Read a data point, and use it to initialize the top blob.
   AnnotatedDatum& anno_datum = *(reader_.full().peek());
 
+    for (int g = 0; g < anno_datum.annotation_group_size(); ++g) {
+      for (int a = 0; a < anno_datum.annotation_group(g).annotation_size(); ++a) {
+        NormalizedBBox bbox = anno_datum.annotation_group(g).annotation(a).bbox();
+        LOG(INFO) << "the bbox (xmin, ymin, xmax, ymax, rotation): " << bbox.xmin()
+          << " " << bbox.xmax() << " " << bbox.ymin() << " " << bbox.ymax() 
+          << " " << bbox.rotation();
+      }
+    }    
+    
   // Use data_transformer to infer the expected blob shape from anno_datum.
   vector<int> top_shape =
       this->data_transformer_->InferBlobShape(anno_datum.datum());
@@ -65,6 +74,7 @@ void AnnotatedDataLayer<Dtype>::DataLayerSetUp(
   // label
   if (this->output_labels_) {
     has_anno_type_ = anno_datum.has_type() || anno_data_param.has_anno_type();
+    orient_anno_ = anno_data_param.orient_anno();
     vector<int> label_shape(4, 1);
     if (has_anno_type_) {
       anno_type_ = anno_datum.type();
@@ -93,7 +103,11 @@ void AnnotatedDataLayer<Dtype>::DataLayerSetUp(
         // cpu_data and gpu_data for consistent prefetch thread. Thus we make
         // sure there is at least one bbox.
         label_shape[2] = std::max(num_bboxes, 1);
-        label_shape[3] = 8;
+        if (orient_anno_) {
+          label_shape[3] = 9;
+        } else {
+          label_shape[3] = 8;          
+        }
       } else {
         LOG(FATAL) << "Unknown annotation type.";
       }
@@ -148,6 +162,14 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     timer.Start();
     // get a anno_datum
     AnnotatedDatum& anno_datum = *(reader_.full().pop("Waiting for data"));
+    // for (int g = 0; g < anno_datum.annotation_group_size(); ++g) {
+    //   for (int a = 0; a < anno_datum.annotation_group(g).annotation_size(); ++a) {
+    //     NormalizedBBox bbox = anno_datum.annotation_group(g).annotation(a).bbox();
+    //     LOG(INFO) << "the bbox (xmin, ymin, xmax, ymax, rotation): " << bbox.xmin()
+    //       << " " << bbox.xmax() << " " << bbox.ymin() << " " << bbox.ymax() 
+    //       << " " << bbox.rotation();
+    //   }
+    // }    
     read_time += timer.MicroSeconds();
     timer.Start();
     AnnotatedDatum distort_datum;
@@ -265,7 +287,12 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
       label_shape[0] = 1;
       label_shape[1] = 1;
-      label_shape[3] = 8;
+      if (orient_anno_){
+        label_shape[3] = 9;
+      } else {
+        label_shape[3] = 8;
+      }
+      // LOG(INFO) << "num_bboxes: " << num_bboxes;
       if (num_bboxes == 0) {
         // Store all -1 in the label.
         label_shape[2] = 1;
@@ -292,6 +319,14 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
               top_label[idx++] = bbox.xmax();
               top_label[idx++] = bbox.ymax();
               top_label[idx++] = bbox.difficult();
+              if (orient_anno_) {
+                top_label[idx++] = bbox.rotation();
+              }  
+              // LOG(INFO) << "the label: " << anno_group.group_label()
+              //   << "\tinstance_id: " << anno.instance_id()
+              //   << "\t bbox: " << bbox.xmin() << " " << bbox.ymin() << " " <<
+              //   bbox.xmax()  << " " << bbox.ymax()  
+              //   << "\trotation: " << bbox.rotation();          
             }
           }
         }
@@ -302,9 +337,9 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   }
   timer.Stop();
   batch_timer.Stop();
-  DLOG(INFO) << "Prefetch batch: " << batch_timer.MilliSeconds() << " ms.";
-  DLOG(INFO) << "     Read time: " << read_time / 1000 << " ms.";
-  DLOG(INFO) << "Transform time: " << trans_time / 1000 << " ms.";
+  // DLOG(INFO) << "Prefetch batch: " << batch_timer.MilliSeconds() << " ms.";
+  // DLOG(INFO) << "     Read time: " << read_time / 1000 << " ms.";
+  // DLOG(INFO) << "Transform time: " << trans_time / 1000 << " ms.";
 }
 
 INSTANTIATE_CLASS(AnnotatedDataLayer);

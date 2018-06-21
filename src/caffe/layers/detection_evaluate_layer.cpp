@@ -20,6 +20,8 @@ void DetectionEvaluateLayer<Dtype>::LayerSetUp(
   overlap_threshold_ = detection_evaluate_param.overlap_threshold();
   CHECK_GT(overlap_threshold_, 0.) << "overlap_threshold must be non negative.";
   evaluate_difficult_gt_ = detection_evaluate_param.evaluate_difficult_gt();
+	//ADD PARAM MAP_OBJECT_TO_AGNOSTIC
+	map_object_to_agnostic_ = detection_evaluate_param.map_object_to_agnostic();
   if (detection_evaluate_param.has_name_size_file()) {
     string name_size_file = detection_evaluate_param.name_size_file();
     std::ifstream infile(name_size_file.c_str());
@@ -70,9 +72,13 @@ void DetectionEvaluateLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     det_data += 7;
   }
   top_shape.push_back(num_pos_classes + num_valid_det);
-  // Each row is a 5 dimension vector, which stores
+	// Each row is a 5 dimension vector, which stores
   // [image_id, label, confidence, true_pos, false_pos]
   top_shape.push_back(5);
+	
+/*	//ADD ONE DIMENSION [...,gt_num]
+	top_shape.push_back(6);*/
+	
   top[0]->Reshape(top_shape);
 }
 
@@ -82,17 +88,17 @@ void DetectionEvaluateLayer<Dtype>::Forward_cpu(
   const Dtype* det_data = bottom[0]->cpu_data();
   const Dtype* gt_data = bottom[1]->cpu_data();
 
-  // Retrieve all detection results.
+	// Retrieve all detection results.
   map<int, LabelBBox> all_detections;
   GetDetectionResults(det_data, bottom[0]->height(), background_label_id_,
                       &all_detections);
 
   // Retrieve all ground truth (including difficult ones).
-  map<int, LabelBBox> all_gt_bboxes;
-  GetGroundTruth(gt_data, bottom[1]->height(), background_label_id_,
-                 true, &all_gt_bboxes);
+	map<int, LabelBBox> all_gt_bboxes;
+	GetGroundTruth (gt_data,bottom[1]->height(), background_label_id_,
+	                true, map_object_to_agnostic_,	&all_gt_bboxes) ;	
 
-  Dtype* top_data = top[0]->mutable_cpu_data();
+Dtype* top_data = top[0]->mutable_cpu_data();
   caffe_set(top[0]->count(), Dtype(0.), top_data);
   int num_det = 0;
 

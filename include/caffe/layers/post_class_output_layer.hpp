@@ -96,6 +96,23 @@ class PostClassOutputLayer : public Layer<Dtype> {
   int top_k_;
   float eta_;
 
+  bool need_save_;
+  string output_directory_;
+  string output_name_prefix_;
+  string output_format_;
+  map<int, string> label_to_name_;
+  map<int, string> label_to_display_name_;
+  vector<string> names_;
+  vector<pair<int, int> > sizes_;
+  int num_test_image_;
+  int name_count_;
+  bool has_resize_;
+  ResizeParameter resize_param_;
+  bool use_as_proposal_;
+  bool num_proposal_;
+
+  ptree detections_;
+  
   shared_ptr<DataTransformer<Dtype> > data_transformer_;
   Blob<Dtype> conf_permute_;
 };

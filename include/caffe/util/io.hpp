@@ -207,6 +207,28 @@ bool ReadXMLToAnnotatedDatum(const string& labelname, const int img_height,
     const int img_width, const std::map<string, int>& name_to_label,
     AnnotatedDatum* anno_datum);
 
+// convert rotate detection data
+bool ReadRichImageToRotateAnnotatedDatum(const string& filename,
+    const string& labelname, const int height, const int width,
+    const int min_dim, const int max_dim, const bool is_color,
+    const std::string& encoding, const AnnotatedDatum_AnnotationType type,
+    const string& labeltype, const std::map<string, int>& name_to_label,
+    AnnotatedDatum* anno_datum);
+
+inline bool ReadRichImageToRotateAnnotatedDatum(const string& filename,
+    const string& labelname, const int height, const int width,
+    const bool is_color, const std::string & encoding,
+    const AnnotatedDatum_AnnotationType type, const string& labeltype,
+    const std::map<string, int>& name_to_label, AnnotatedDatum* anno_datum) {
+  return ReadRichImageToAnnotatedDatum(filename, labelname, height, width, 0, 0,
+                      is_color, encoding, type, labeltype, name_to_label,
+                      anno_datum);
+}
+
+bool ReadXMLToRotateAnnotatedDatum(const string& labelname, const int img_height,
+    const int img_width, const std::map<string, int>& name_to_label,
+    AnnotatedDatum* anno_datum);
+
 bool ReadJSONToAnnotatedDatum(const string& labelname, const int img_height,
     const int img_width, const std::map<string, int>& name_to_label,
     AnnotatedDatum* anno_datum);

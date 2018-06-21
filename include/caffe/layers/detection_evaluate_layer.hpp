@@ -58,6 +58,7 @@ class DetectionEvaluateLayer : public Layer<Dtype> {
   int background_label_id_;
   float overlap_threshold_;
   bool evaluate_difficult_gt_;
+  bool map_object_to_agnostic_;		
   vector<pair<int, int> > sizes_;
   int count_;
   bool use_normalized_bbox_;

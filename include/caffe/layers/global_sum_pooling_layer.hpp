@@ -36,6 +36,14 @@ class GlobalSumPoolingLayer : public Layer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  int num_classes_;
+  int actual_num_cls_;
+  int cls_start_idx_;
+  int num_proposal_;
+  int inner_num_;
+  bool include_background_;
+  int batch_size_;
 };
 
 }  // namespace caffe

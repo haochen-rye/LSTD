@@ -536,6 +536,16 @@ void Solver<Dtype>::TestDetection(const int test_net_id) {
       ComputeAP(label_true_pos, label_num_pos, label_false_pos,
                 param_.ap_version(), &prec, &rec, &(APs[label]));
       mAP += APs[label];
+
+      float cur_score, f_score = 0;
+      for (int i=0; i < prec.size(); i++){
+        cur_score = 2 * prec.at(i) * rec.at(i) / (prec.at(i) + rec.at(i));
+        if (cur_score > f_score) {
+          f_score = cur_score;
+        }
+      }
+      LOG(INFO) << "The max f_score: " << f_score;
+
       if (param_.show_per_class_result()) {
         LOG(INFO) << "class" << label << ": " << APs[label];
       }

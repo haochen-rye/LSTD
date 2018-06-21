@@ -232,6 +232,48 @@ bool ReadRichImageToAnnotatedDatum(const string& filename,
   }
 }
 
+bool ReadRichImageToRotateAnnotatedDatum(const string& filename,
+    const string& labelfile, const int height, const int width,
+    const int min_dim, const int max_dim, const bool is_color,
+    const string& encoding, const AnnotatedDatum_AnnotationType type,
+    const string& labeltype, const std::map<string, int>& name_to_label,
+    AnnotatedDatum* anno_datum) {
+  // Read image to datum.
+  bool status = ReadImageToDatum(filename, -1, height, width,
+                                 min_dim, max_dim, is_color, encoding,
+                                 anno_datum->mutable_datum());
+  if (status == false) {
+    return status;
+  }
+  anno_datum->clear_annotation_group();
+  if (!boost::filesystem::exists(labelfile)) {
+    return true;
+  }
+  switch (type) {
+    case AnnotatedDatum_AnnotationType_BBOX:
+      int ori_height, ori_width;
+      GetImageSize(filename, &ori_height, &ori_width);
+      if (labeltype == "xml") {
+        return ReadXMLToRotateAnnotatedDatum(labelfile, ori_height, ori_width,
+                                       name_to_label, anno_datum);
+      //TODO: json and txt file
+      // } else if (labeltype == "json") {
+      //   return ReadJSONToAnnotatedDatum(labelfile, ori_height, ori_width,
+      //                                   name_to_label, anno_datum);
+      // } else if (labeltype == "txt") {
+      //   return ReadTxtToAnnotatedDatum(labelfile, ori_height, ori_width,
+      //                                  anno_datum);
+      } else {
+        LOG(FATAL) << "Unknown label file type.";
+        return false;
+      }
+      break;
+    default:
+      LOG(FATAL) << "Unknown annotation type.";
+      return false;
+  }
+}
+
 #endif  // USE_OPENCV
 
 bool ReadFileToDatum(const string& filename, const int label,
@@ -350,6 +392,125 @@ bool ReadXMLToAnnotatedDatum(const string& labelfile, const int img_height,
           bbox->set_xmax(static_cast<float>(xmax) / width);
           bbox->set_ymax(static_cast<float>(ymax) / height);
           bbox->set_difficult(difficult);
+        }
+      }
+    }
+  }
+  return true;
+}
+
+// Parse rotate voc_style detection annotation.
+bool ReadXMLToRotateAnnotatedDatum(const string& labelfile, const int img_height,
+    const int img_width, const std::map<string, int>& name_to_label,
+    AnnotatedDatum* anno_datum) {
+  ptree pt;
+  read_xml(labelfile, pt);
+
+  // Parse annotation.
+  int width = 0, height = 0;
+  try {
+    height = pt.get<int>("annotation.size.height");
+    width = pt.get<int>("annotation.size.width");
+  } catch (const ptree_error &e) {
+    LOG(WARNING) << "When parsing " << labelfile << ": " << e.what();
+    height = img_height;
+    width = img_width;
+  }
+  // LOG(INFO) << "THE WIDTH/HEIGHT: " << width << "/" << height;
+
+  LOG_IF(WARNING, height != img_height) << labelfile <<
+      " inconsistent image height.";
+  LOG_IF(WARNING, width != img_width) << labelfile <<
+      " inconsistent image width.";
+  CHECK(width != 0 && height != 0) << labelfile <<
+      " no valid image width/height.";
+  int instance_id = 0;
+  BOOST_FOREACH(ptree::value_type &v1, pt.get_child("annotation")) {
+    ptree pt1 = v1.second;
+    if (v1.first == "object") {
+      Annotation* anno = NULL;
+      bool difficult = false;
+      ptree object = v1.second;
+      BOOST_FOREACH(ptree::value_type &v2, object.get_child("")) {
+        ptree pt2 = v2.second;
+        if (v2.first == "name") {
+
+          string name = pt2.data();
+          if (name_to_label.find(name) == name_to_label.end()) {
+            LOG(FATAL) << "Unknown name: " << name;
+          }
+          int label = name_to_label.find(name)->second;
+          bool found_group = false;
+          for (int g = 0; g < anno_datum->annotation_group_size(); ++g) {
+            AnnotationGroup* anno_group =
+                anno_datum->mutable_annotation_group(g);
+            if (label == anno_group->group_label()) {
+              if (anno_group->annotation_size() == 0) {
+                instance_id = 0;
+              } else {
+                instance_id = anno_group->annotation(
+                    anno_group->annotation_size() - 1).instance_id() + 1;
+              }
+              anno = anno_group->add_annotation();
+              found_group = true;
+            }
+          }
+          if (!found_group) {
+            // If there is no such annotation_group, create a new one.
+            AnnotationGroup* anno_group = anno_datum->add_annotation_group();
+            anno_group->set_group_label(label);
+            anno = anno_group->add_annotation();
+            instance_id = 0;
+          }
+          anno->set_instance_id(instance_id++);
+        } else if (v2.first == "difficult") {
+          difficult = pt2.data() == "1";
+        } else if (v2.first == "orientbox") {
+          // LOG(INFO) << "XML has orientbox";
+
+
+          float xmin = pt2.get<float>("xmin");
+          float ymin = pt2.get<float>("ymin");
+          float xmax = pt2.get<float>("xmax");
+          float ymax = pt2.get<float>("ymax");
+          float rotation = pt2.get<float>("rotation");
+          CHECK_NOTNULL(anno);
+          LOG_IF(WARNING, xmin > width) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymin > height) << labelfile <<
+              " bounding box exceeds image boundary.";
+          // LOG_IF(WARNING, xmax > width) << labelfile <<
+          //     " bounding box exceeds image boundary.";
+          // LOG_IF(WARNING, ymax > height) << labelfile <<
+          //     " bounding box exceeds image boundary.";
+          // LOG_IF(WARNING, xmin < 0) << labelfile <<
+          //     " bounding box exceeds image boundary.";
+          // LOG_IF(WARNING, ymin < 0) << labelfile <<
+          //     " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmax < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymax < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmin > xmax) << labelfile <<
+              " bounding box irregular.";
+          LOG_IF(WARNING, ymin > ymax) << labelfile <<
+              " bounding box irregular.";
+          LOG_IF(WARNING, abs(rotation) > 1.58) << labelfile <<
+              "Rotation angle exceed PI/2";              
+          // Store the normalized bounding box.
+          NormalizedBBox* bbox = anno->mutable_bbox();
+          bbox->set_xmin(static_cast<float>(xmin) / width);
+          bbox->set_ymin(static_cast<float>(ymin) / height);
+          bbox->set_xmax(static_cast<float>(xmax) / width);
+          bbox->set_ymax(static_cast<float>(ymax) / height);
+          bbox->set_rotation(rotation);
+          bbox->set_difficult(difficult);
+          // LOG(INFO) << "the orientbbox (xmin, ymin, xmax, ymax, rotation): "
+          //   << static_cast<float>(xmin) / width << " " 
+          //   << static_cast<float>(ymin) / height << " "
+          //   << static_cast<float>(xmax) / width << " "
+          //   << static_cast<float>(ymax) / height << " "
+          //   << rotation;        
         }
       }
     }

@@ -98,7 +98,10 @@ void ExtrapolateBBox(const ResizeParameter& param, const int height,
 float JaccardOverlap(const NormalizedBBox& bbox1, const NormalizedBBox& bbox2,
                      const bool normalized = true);
 
-template <typename Dtype>
+// Compute the jaccard (intersection over union IoU) overlap between two orient bboxes.
+float OrientJaccardOverlap(const NormalizedBBox& bbox1, const NormalizedBBox& bbox2,
+                     const bool normalized = true, const bool evaluate_rotation = true);
+                     template <typename Dtype>
 Dtype JaccardOverlap(const Dtype* bbox1, const Dtype* bbox2);
 
 // Compute the coverage of bbox1 by bbox2.
@@ -157,7 +160,19 @@ void MatchBBox(const vector<NormalizedBBox>& gt,
     const MatchType match_type, const float overlap_threshold,
     const bool ignore_cross_boundary_bbox,
     vector<int>* match_indices, vector<float>* match_overlaps);
-	
+
+
+// ALIGN THE PROPOSAL WITH PSEUDO LABEL BY ITS OVERLAP WITH THE HIGHEST ONE
+template <typename Dtype>
+void MatchBBOX(const vector<NormalizedBBox>& gt,
+    const vector<NormalizedBBox>& pred_bboxes, 
+    const Dtype* score_data, const bool use_gt_score,
+    const int score_classes, const bool include_background,    
+    const float overlap_threshold, const float min_ovrelap,
+     const bool include_ohem, const float pos_neg_ratio,
+    const bool del_neg,
+    Dtype* align_label, Dtype* label_weight,
+    vector<float>* match_overlaps);
 
 /*Get the label of the prior box*/
 
@@ -195,9 +210,18 @@ void FindMatches(const vector<LabelBBox>& all_loc_preds,
       vector<map<int, vector<float> > >* all_match_overlaps,
       vector<map<int, vector<int> > >* all_match_indices) ;
 
+
 // Count the number of matches from the match indices.
 int CountNumMatches(const vector<map<int, vector<int> > >& all_match_indices,
                     const int num);
+
+// Find the hard examples for sparse annotated images
+void SparseHardExamples(
+    const vector<map<int, vector<float> > >& all_match_overlaps,
+    const MultiBoxLossParameter& multibox_loss_param,
+    int num, int* num_matches, int* num_negs,
+    vector<map<int, vector<int> > >* all_match_indices,
+    vector<vector<int> >* all_neg_indices) ;
 
 // Mine the hard examples from the batch.
 //    conf_blob: stores the confidence prediction.
@@ -222,6 +246,7 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
     vector<map<int, vector<int> > >* all_match_indices,
     vector<vector<int> >* all_neg_indices);
 	
+// the input prior box are proposal box
 template <typename Dtype>
 void MineHardExamples(const Blob<Dtype>& conf_blob,
     const vector<LabelBBox>& all_loc_preds,
@@ -234,6 +259,8 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
     vector<map<int, vector<int> > >* all_match_indices,
     vector<vector<int> >* all_neg_indices);
 
+// mine hard examples for postclassloss layer
+// only the classification are considered
 template <typename Dtype>
 void MineHardExamples(const Blob<Dtype>& conf_blob,
     const int num, const int num_priors,
@@ -243,6 +270,20 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
     int* num_matches, int* num_negs,
     vector<map<int, vector<int> > >* all_match_indices,
     vector<vector<int> >* all_neg_indices);
+
+// mine hard examples for sparse multiboxloss layer
+template <typename Dtype>
+void SparseHardExamples(const Blob<Dtype>& conf_blob,
+    const vector<LabelBBox>& all_loc_preds,
+    const map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+    const vector<NormalizedBBox>& prior_bboxes,
+    const vector<vector<float> >& prior_variances,
+    const vector<map<int, vector<float> > >& all_match_overlaps,
+    const MultiBoxLossParameter& multibox_loss_param,
+    int* num_matches, int* num_negs,
+    vector<map<int, vector<int> > >* all_match_indices,
+    vector<vector<int> >* all_neg_indices);
+  
 
 // Retrieve bounding box ground truth from gt_data.
 //    gt_data: 1 x 1 x num_gt x 7 blob.
@@ -267,6 +308,38 @@ void GetGroundTruth(const Dtype* gt_data, const int num_gt,
       const bool map_object_to_agnostic,
       map<int, LabelBBox>* all_gt_bboxes);	
 	
+// GET THE PSEUDO GROUND TRUTH FOR THE PROPOSALS  
+template <typename Dtype>
+void GetGroundTruth(const Dtype* label_data,const Dtype* proposal_data,
+      const Dtype* score_data, const int batch_size, const int channels,
+      const int actual_classes, const int num_proposal,
+      const float max_score_threshold, const bool use_max_score_threshold_,
+      const int background_label_id, const bool include_background,
+      int num_instance, LabelBBox* all_gt_bboxes);  
+
+template <typename Dtype>
+void GetGroundTruth(const Dtype* label_data,const Dtype* proposal_data,
+      const Dtype* score_data, const Dtype* rela_score_data,
+      const int batch_size, const int channels,
+      const int actual_classes, const int num_proposal,
+      const float score_threshold,
+      const int background_label_id, const bool include_background,
+      int num_instance, LabelBBox* all_gt_bboxes);  
+
+//  Retrieve orient bounding box ground truth from gt_data
+//  gt_data: 1 * 1 * num_gt * 9 blob 
+//  [item_id, group_label, instance_id, xmin, ymin, xmax, ymax, difficult, rotation]
+template <typename Dtype>
+void GetOrientGroundTruth(const Dtype* gt_data, const int num_gt,
+        const int background_label_id, const bool use_difficult_gt,
+        map<int, vector<NormalizedBBox> >* all_gt_bboxes);
+
+// Store ground truth bboxes of same label in a group.
+template <typename Dtype>
+void GetOrientGroundTruth(const Dtype* gt_data, const int num_gt,
+      const int background_label_id, const bool use_difficult_gt,
+      map<int, LabelBBox>* all_gt_bboxes);
+
 // Get location predictions from loc_data.
 //    loc_data: num x num_preds_per_class * num_loc_classes * 4 blob.
 //    num: the number of images.
@@ -278,6 +351,12 @@ void GetGroundTruth(const Dtype* gt_data, const int num_gt,
 //      location prediction for an image.
 template <typename Dtype>
 void GetLocPredictions(const Dtype* loc_data, const int num,
+      const int num_preds_per_class, const int num_loc_classes,
+      const bool share_location, vector<LabelBBox>* loc_preds);
+
+template <typename Dtype>
+void GetLocPredictions(const Dtype* loc_data, 
+      const Dtype* rotation_data,  const int num,
       const int num_preds_per_class, const int num_loc_classes,
       const bool share_location, vector<LabelBBox>* loc_preds);
 
@@ -308,6 +387,41 @@ void EncodeLocPrediction(const vector<LabelBBox>& all_loc_preds,
       const vector<vector<float> >& prior_variances,
       const MultiBoxLossParameter& multibox_loss_param,
       Dtype* loc_pred_data, Dtype* loc_gt_data);
+
+// encode the loc_pred/weight/gt for sparse multibox loss layer
+template <typename Dtype>
+void EncodeLocPrediction(const vector<LabelBBox>& all_loc_preds,
+      const map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+      const vector<map<int, vector<int> > >& all_match_indices,
+      const vector<NormalizedBBox>& prior_bboxes,
+      const vector<vector<float> >& prior_variances,
+      const MultiBoxLossParameter& multibox_loss_param,
+      Dtype* loc_pred_data, Dtype* loc_gt_data, Dtype* loc_weight_data) ;
+
+// Encode the localization and rotation prediction and ground truth for each matched prior.
+//  rotation_data: num * num_preds_per_class * num_loc_classes * 1 blob.
+//    num: the number of images.
+//    num_preds_per_class: number of predictions per class.
+//    num_loc_classes: number of location classes. It is 1 if share_location is
+//      true; and is equal to number of classes needed to predict otherwise.
+//  all_gt_bboxes: stores ground truth bboxes for the batch.
+//  all_match_indices: stores mapping between predictions and ground truth.
+//  prior_bboxes: stores all the prior bboxes in the format of NormalizedBBox.
+//  prior_variances: stores all the variances needed by prior bboxes.
+//  multibox_loss_param: stores the parameters for MultiBoxLossLayer.
+//  loc_pred_data: stores the location prediction results.
+//  loc_gt_data: stores the encoded location ground truth.
+//  rotation_pred_data: stores the rotation prediction results
+//  rotation_gt_data: stores the encoded location ground truth
+template <typename Dtype>
+void EncodeLocPrediction(const vector<LabelBBox>& all_loc_preds,
+      const Dtype* rotation_data, const LabelBBox& all_gt_bboxes,
+      const vector<map<int, vector<int> > >& all_match_indices,
+      const vector<NormalizedBBox>& prior_bboxes,
+      const vector<vector<float> >& prior_variances,
+      const MultiBoxLossParameter& multibox_loss_param,
+      Dtype* loc_pred_data, Dtype* loc_gt_data,
+      Dtype* rotation_pred_data, Dtype* rotation_gt_data);
 
 // Compute the localization loss per matched prior.
 //    loc_pred: stores the location prediction results.
@@ -422,6 +536,15 @@ void EncodeConfPrediction(const Dtype* conf_data, const int num,
       const map<int, vector<NormalizedBBox> >& all_gt_bboxes,
       Dtype* conf_pred_data, Dtype* conf_gt_data);
 
+// generate the conf_data and conf_weight for sparsemultibox loss layer
+template <typename Dtype>
+void EncodeConfPrediction(const Dtype* conf_data, const int num,
+      const int num_priors, const MultiBoxLossParameter& multibox_loss_param,
+      const vector<map<int, vector<int> > >& all_match_indices,
+      const vector<vector<int> >& all_neg_indices,
+      const map<int, vector<NormalizedBBox> >& all_gt_bboxes,
+      Dtype* conf_pred_data, Dtype* conf_gt_data, Dtype* conf_weight_data);
+
 // template <typename Dtype>
 // void EncodeConfPrediction(const Dtype* conf_data, const int num,
 //       const int num_priors, const MultiBoxLossParameter& post_class_loss_param,
@@ -457,8 +580,22 @@ void GetDetectionResults(const Dtype* det_data, const int num_det,
       const int background_label_id,
       map<int, LabelBBox>* all_detections);
 
+//    det_data: 1 x 1 x num_det x 8 blob.
+template <typename Dtype>
+void GetOrientDetectionResults(const Dtype* det_data, const int num_det,
+      const int background_label_id,
+      map<int, LabelBBox>* all_detections);
+
 template <typename Dtype>
 void GetDetectionResults(const Dtype* det_data, const int num_det,
+      const int background_label_id,
+      map<int, vector<NormalizedBBox> >* all_detections);
+
+// get the detection results from proposal layer for oicr layer.
+template <typename Dtype>
+void GetDetectionResults(const Dtype* det_data, 
+      const int num_det, const int num_proposal,
+      const int batch_size,
       const int background_label_id,
       map<int, vector<NormalizedBBox> >* all_detections);
 

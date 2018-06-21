@@ -299,6 +299,9 @@ void DataTransformer<Dtype>::TransformAnnotation(
         const NormalizedBBox& bbox = anno.bbox();
         // Adjust bounding box annotation.
         NormalizedBBox resize_bbox = bbox;
+    // LOG(INFO) << "resize_bbox (xmin,ymin,xmax,ymax): " << resize_bbox.xmin() << " " 
+      // << resize_bbox.ymin() << " " << resize_bbox.xmax() << " " << resize_bbox.ymax();
+
         if (do_resize && param_.has_resize_param()) {
           CHECK_GT(img_height, 0);
           CHECK_GT(img_width, 0);
@@ -310,8 +313,11 @@ void DataTransformer<Dtype>::TransformAnnotation(
                                 param_.emit_constraint())) {
           continue;
         }
+        // LOG(INFO) << "Have meet emit_constraint";
+
         NormalizedBBox proj_bbox;
         if (ProjectBBox(crop_bbox, resize_bbox, &proj_bbox)) {
+          // LOG(INFO) << "Project bbox";
           has_valid_annotation = true;
           Annotation* transformed_anno =
               transformed_anno_group.add_annotation();
@@ -322,6 +328,10 @@ void DataTransformer<Dtype>::TransformAnnotation(
             Dtype temp = transformed_bbox->xmin();
             transformed_bbox->set_xmin(1 - transformed_bbox->xmax());
             transformed_bbox->set_xmax(1 - temp);
+            float rotation = transformed_bbox->rotation();
+            if (!rotation) {
+              transformed_bbox->set_rotation(-rotation);
+            }            
           }
           if (do_resize && param_.has_resize_param()) {
             ExtrapolateBBox(param_.resize_param(), img_height, img_width,
@@ -416,6 +426,8 @@ void DataTransformer<Dtype>::CropImage(const AnnotatedDatum& anno_datum,
   // Crop the datum.
   CropImage(anno_datum.datum(), bbox, cropped_anno_datum->mutable_datum());
   cropped_anno_datum->set_type(anno_datum.type());
+  // LOG(INFO) << "The anno datum type: " << anno_datum.type()
+  //   << "The cropped_anno_datum type: " << cropped_anno_datum->type();
 
   // Transform the annotation according to crop_bbox.
   const bool do_resize = false;

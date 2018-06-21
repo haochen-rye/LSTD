@@ -63,14 +63,14 @@ class DetectionOutputLayer : public Layer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
-  /// @brief Not implemented
+  // / @brief Not implemented
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-    NOT_IMPLEMENTED;
+    // NOT_IMPLEMENTED;
   }
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-    NOT_IMPLEMENTED;
+    // NOT_IMPLEMENTED;
   }
 
   int num_classes_;
@@ -101,6 +101,8 @@ class DetectionOutputLayer : public Layer<Dtype> {
   int name_count_;
   bool has_resize_;
   ResizeParameter resize_param_;
+  bool use_as_proposal_;
+  bool num_proposal_;
 
   ptree detections_;
 
