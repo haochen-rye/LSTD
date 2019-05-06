@@ -1,0 +1,39 @@
+# The train/test net protocol buffer definition
+train_net: "models/voc2007/kd_oicr_SSD_300x300/weighted_min_0.3_train.prototxt" #batch_size: 40
+
+test_interval: 400
+test_net: "models/voc2007/kd_oicr_SSD_300x300/8_test.prototxt" #batch_size: 20
+test_iter: 619
+test_initialization: true
+
+type: "Adam"
+momentum: 0.9
+momentum2: 0.999
+
+regularization_type: "L2"
+
+# The learning rate policy
+lr_policy: "multistep"
+gamma: 0.1
+stepvalue: 4800
+stepvalue: 7200
+#stepvalue: 1500
+#stepvalue: 3500
+#stepvalue: 4800
+# The maximum number of iterations
+max_iter: 8000
+
+# Display every 200 iterations
+display: 10
+
+# snapshot intermediate results
+snapshot: 7200
+debug_info: false
+snapshot_after_train: true
+average_loss: 10
+iter_size: 1
+
+eval_type: "detection"
+ap_version: "11point"
+show_per_class_result: true
+
