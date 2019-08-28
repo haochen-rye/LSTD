@@ -36,4 +36,6 @@ Please cite LSTD in your publicatins if it helps ypur research.
     }
 
 ### Utility
-To train/test the models, you may refer to our prototxt samples in [train.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/train.prototxt), [test.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/test.prototxt) and [solver.prototxt](https://github.com/Cassie94/LSTD/blob/master/models/kd_template_solver.prototxt).
+To train the model like in our POTD paper, you can refer to out training scipt train_script.sh
+(https://github.com/Cassie94/LSTD/blob/lstd/models/voc2007/kd_oicr_SSD_300x300/train_script.sh)
+To train/test the models, you may refer to our prototxt samples in [train.prototxt].
