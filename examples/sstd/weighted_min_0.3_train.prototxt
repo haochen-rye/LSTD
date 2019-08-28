@@ -44,7 +44,7 @@ layer {
     }
   }
   data_param {
-    source: "examples/voc2007/voc0712_trainval_lmdb"
+    source: "examples/VOC0712/voc0712_trainval_lmdb"
     batch_size: 32
     backend: LMDB
   }
@@ -2592,4 +2592,3 @@ layer {
     axis: 2
   }
 }
-

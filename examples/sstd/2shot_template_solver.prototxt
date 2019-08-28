@@ -1,10 +1,10 @@
 # The train/test net protocol buffer definition
-train_net: "models/voc2007/kd_oicr_SSD_300x300/weighted_min_0.3_train.prototxt" #batch_size: 40
+train_net: "models/voc/weighted_min_0.3_train.prototxt" #batch_size: 40
 
-test_interval: 500
-test_net: "models/voc2007/kd_oicr_SSD_300x300/8_test.prototxt" #batch_size: 20
-test_iter: 619
-test_initialization: true #false
+#test_interval: 500
+#test_net: "models/voc2007/kd_oicr_SSD_300x300/8_test.prototxt" #batch_size: 20
+#test_iter: 619
+#test_initialization: true #false
 
 type: "Adam"
 momentum: 0.9
@@ -36,4 +36,3 @@ iter_size: 1
 eval_type: "detection"
 ap_version: "11point"
 show_per_class_result: true
-

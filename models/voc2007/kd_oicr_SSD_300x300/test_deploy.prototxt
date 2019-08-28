@@ -2085,6 +2085,24 @@ layer {
   top: "conv_add2"
 }
 layer {
+  name: "oicr_score_0"
+  type: "InnerProduct"
+  bottom: "conv_add2"
+  top: "oicr_score_0"
+  inner_product_param {
+    num_output: 21
+  }
+}
+layer {
+  name: "oicr_score_1"
+  type: "InnerProduct"
+  bottom: "conv_add2"
+  top: "oicr_score_1"
+  inner_product_param {
+    num_output: 21
+  }
+}
+layer {
   name: "oicr_score_2"
   type: "InnerProduct"
   bottom: "conv_add2"
@@ -2147,4 +2165,3 @@ layer {
     confidence_threshold: 0.01
   }
 }
-

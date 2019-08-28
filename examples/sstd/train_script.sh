@@ -2,9 +2,9 @@
 set -e
 set -x
 
-folder="models/voc2007/kd_oicr_SSD_300x300"
+folder="models/voc"
 file_prefix="voc2007_ssd_300_"
-model_path="models/voc2007/kd_oicr_SSD_300x300"
+model_path="models/voc"
 
 if [ "$#" -lt 2 ]; then
 	echo "Illegal number of parameters"
@@ -48,7 +48,7 @@ if [ "$#" -ge 5 ]; then
 tunedmodel=$5
 fi
 
-./build/tools/caffe.bin train --solver=$solverfile --weights=$model_path/$tunedmodel  --gpu $device_id 2>&1 | tee "${snapshot_path}/train.info" 
+./build/tools/caffe.bin train --solver=$solverfile --weights=$model_path/$tunedmodel  --gpu $device_id 2>&1 | tee "${snapshot_path}/train.info"
 
 # cat ${snapshot_path}/train.info | grep loss+ | awk '{print $8 " " $11}' > ${snapshot_path}/loss.info
 cat ${snapshot_path}/train.info | grep "Test net output" | awk '{print $0}' > ${snapshot_path}/test.info
