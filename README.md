@@ -19,7 +19,7 @@ More details can be found in [LSTD](https://arxiv.org/abs/1803.01529v1).
 For transfer detection, our LSTD outperforms SSD and Faster RCNN significantly.
 More experiments can be found in [LSTD](https://arxiv.org/abs/1803.01529v1).
 <p align="center">
-<img src='models/archi.png'  width="600px">
+<img src='https://github.com/Cassie94/LSTD/blob/master/models/lstd.jpg'  width="600px">
 </p>
 
 
