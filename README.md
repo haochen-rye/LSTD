@@ -12,8 +12,9 @@ Specifically, SSD acts as the region proposal network (RPN) in LSTD.
 Additionally, we propose Transfer Knowledge (TK) and Background Depression (BD) modules for transfer detection task.
 More details can be found in [LSTD](https://arxiv.org/abs/1803.01529v1).
 <p align="center">
-<img src='models/lstd.jpg'  width="800px">
+<img src='https://github.com/Cassie94/LSTD/blob/master/models/archi.png'  width="800px">
 </p>
+
 
 For transfer detection, our LSTD outperforms SSD and Faster RCNN significantly.
 More experiments can be found in [LSTD](https://arxiv.org/abs/1803.01529v1).
