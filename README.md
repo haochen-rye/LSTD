@@ -2,7 +2,7 @@
 
 ### Introduction
 
-LSTD is an unified framework for transfer object detetction with a single network. For more details, please refer to our [AAAI 2018 spotlight paper](https://arxiv.org/abs/1803.01529v1).
+LSTD is an unified framework for transfer object detetction with a single network. For more details, please refer to our [AAAI 2018 paper](https://arxiv.org/abs/1803.01529v1).
 
 ### Framework  
 LSTD is a network combining the advantage of SSD and Faster-RCNN, where it shares the two-stage detection framework with 
@@ -36,5 +36,4 @@ Please cite LSTD in your publicatins if it helps ypur research.
     }
 
 ### Utility
-To train the model like in our POTD paper, you can refer to out training scipt [train_script.sh]
-(https://github.com/Cassie94/LSTD/blob/lstd/models/voc2007/kd_oicr_SSD_300x300/train_script.sh)
+To train the model like in our POTD paper, you can refer to out training scipt [train_script.sh](https://github.com/Cassie94/LSTD/blob/lstd/models/voc2007/kd_oicr_SSD_300x300/train_script.sh)
