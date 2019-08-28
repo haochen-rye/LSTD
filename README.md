@@ -36,5 +36,5 @@ Please cite LSTD in your publicatins if it helps ypur research.
     }
 
 ### Utility
-To train the model like in our POTD paper, you can refer to out training scipt train_script.sh
+To train the model like in our POTD paper, you can refer to out training scipt [train_script.sh]
 (https://github.com/Cassie94/LSTD/blob/lstd/models/voc2007/kd_oicr_SSD_300x300/train_script.sh)
