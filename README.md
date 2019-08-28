@@ -36,4 +36,6 @@ Please cite LSTD in your publicatins if it helps ypur research.
     }
 
 ### Utility
+First, you may need to setup the environment, as in [SSD](https://github.com/weiliu89/caffe/tree/ssd).
+
 To train the model like in our POTD paper, you can refer to out training scipt [train_script.sh](https://github.com/Cassie94/LSTD/blob/lstd/models/voc2007/kd_oicr_SSD_300x300/train_script.sh)
